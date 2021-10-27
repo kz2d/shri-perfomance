@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Stats exampple</title>
+  </head>
+  <body>
+    <script>
+      function quantile(arr, q) {
+        const sorted = arr.sort((a, b) => a - b);
+        const pos = (sorted.length - 1) * q;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+
+        if (sorted[base + 1] !== undefined) {
+          return Math.floor(
+            sorted[base] + rest * (sorted[base + 1] - sorted[base])
+          );
+        } else {
+          return Math.floor(sorted[base]);
+        }
+      }
+
+      function prepareData(result) {
+        return result.data.map((item) => {
+          const date = item.timestamp.split("T")[0];
+          item.date = Date.UTC(...date.split("-"));
+          return item;
+        });
+      }
+
+      // TODO: реализовать
+      // показать значение метрики за несколько день
+      function showMetricByPeriod(data, page, start, end) {
+        console.log(`All metrics from ${start} to ${end}:`);
+
+        start = Date.UTC(...start.split("-"));
+        end = Date.UTC(...end.split("-"));
+
+        let table = {};
+        table.connect = addMetricByDate(data, page, "connect", start, end);
+        table.ttfb = addMetricByDate(data, page, "ttfb", start, end);
+        table.yellow = addMetricByDate(data, page, "yellow", start, end);
+        table.red = addMetricByDate(data, page, "red", start, end);
+        table["first-paint"] = addMetricByDate(
+          data,
+          page,
+          "first-paint",
+          start,
+          end
+        );
+        table["first-contentful-paint"] = addMetricByDate(
+          data,
+          page,
+          "first-contentful-paint",
+          start,
+          end
+        );
+        table["expensive-computatiuon"] = addMetricByDate(
+          data,
+          page,
+          "expensive-computatiuon",
+          start,
+          end
+        );
+
+        console.table(table);
+      }
+
+      // показать сессию пользователя
+      function showSession(data, requesId) {
+        console.log(`All metrics for ${requesId}:`);
+        const SampleData = data
+          .filter((item) => item.requestId == requesId)
+          .sort((a, b) => a.date - b.date);
+        let table = {};
+        for (let i = 0; i < SampleData.length; i++) {
+          table[i] = { type: SampleData[i].name, value: SampleData[i].value };
+        }
+
+        console.table(table);
+      }
+
+      // сравнить метрику в разных срезах
+      function compareMetric(data) {
+        const SampleOne = data.filter(
+          (item) => item.additional.platform == "desktop"
+        );
+        const SampleTwo = data.filter(
+          (item) => item.additional.platform == "touch"
+        );
+        console.log("DESKTOP");
+        showMetricByPeriod(SampleOne, "send test", "2000-1-1", "2222-1-1");
+        console.log("TOUCH");
+        showMetricByPeriod(SampleTwo, "send test", "2000-1-1", "2222-1-1");
+      }
+
+      // любые другие сценарии, которые считаете полезными
+
+      // Пример
+      // добавить метрику за выбранный день
+      function addMetricByDate(
+        data,
+        page,
+        name,
+        dateStart,
+        dateEnd = dateStart
+      ) {
+        let sampleData = data
+          .filter(
+            (item) =>
+              item.page == page &&
+              item.name == name &&
+              item.date >= dateStart &&
+              item.date <= dateEnd
+          )
+          .map((item) => item.value);
+
+        let result = {};
+
+        result.hits = sampleData.length;
+        result.p25 = quantile(sampleData, 0.25);
+        result.p50 = quantile(sampleData, 0.5);
+        result.p75 = quantile(sampleData, 0.75);
+        result.p95 = quantile(sampleData, 0.95);
+
+        return result;
+      }
+      // рассчитывает все метрики за день
+      function calcMetricsByDate(data, page, date) {
+        console.log(`All metrics for ${date}:`);
+        date = Date.UTC(...date.split("-"));
+
+        let table = {};
+        table.connect = addMetricByDate(data, page, "connect", date);
+        table.ttfb = addMetricByDate(data, page, "ttfb", date);
+        table.yellow = addMetricByDate(data, page, "yellow", date);
+        table.red = addMetricByDate(data, page, "red", date);
+        table["first-paint"] = addMetricByDate(data, page, "first-paint", date);
+        table["first-contentful-paint"] = addMetricByDate(
+          data,
+          page,
+          "first-contentful-paint",
+          date
+        );
+        table["expensive-computatiuon"] = addMetricByDate(
+          data,
+          page,
+          "expensive-computatiuon",
+          date
+        );
+
+        console.table(table);
+      }
+
+      fetch(
+        "https://shri.yandex/hw/stat/data?counterId=28F28E50-3339-11EC-9EDF-9F93090795B1"
+      )
+        .then((res) => res.json())
+        .then((result) => {
+          let data = prepareData(result);
+
+          calcMetricsByDate(data, "send test", "2021-10-27");
+          showMetricByPeriod(data, "send test", "2021-10-27", "2021-10-28");
+          showSession(data, "029976633889");
+          compareMetric(data);
+          // добавить свои сценарии, реализовать функции выше
+        });
+    </script>
+  </body>
+</html>

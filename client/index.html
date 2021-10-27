@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Document</title>
+  </head>
+  <link rel="stylesheet" href="index.css" />
+  <body onload="onload()">
+    <button id="yellow">Choose me!!!</button>
+    <button id="red">Choose me!!!</button>
+    <button id="expensive-computatiuon">
+      Very very complicated computations
+    </button>
+    <div id="data"></div>
+    <script src="counter.js"></script>
+    <script>
+      let perfomance = window.performance;
+      let counter = new Counter();
+
+      counter.init(
+        "28F28E50-3339-11EC-9EDF-9F93090795B1",
+        String(Math.random()).substr(2, 12),
+        "send test"
+      );
+      counter.setAdditionalParams({
+        env: "production",
+        browser: getBrowserId(),
+        platform:
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          )
+            ? "touch"
+            : "desktop",
+      });
+      counter.send(
+        "connect",
+        performance.timing.connectEnd - performance.timing.connectStart
+      );
+      counter.send(
+        "ttfb",
+        performance.timing.responseEnd - performance.timing.requestStart
+      );
+
+      //   counter.send("language", navigator.language);
+
+      let timeStart = Date.now();
+
+      let clickOnRed = 0;
+      let clickOnYellow = 0;
+
+      document.getElementById("yellow").onclick = () => {
+        counter.send("clickYellow", 1);
+        clickOnYellow++;
+      };
+      document.getElementById("red").onclick = () => {
+        counter.send("clickRed", 1);
+        clickOnRed++;
+      };
+
+      document.getElementById("expensive-computatiuon").onclick = function () {
+        let timeStart = Date.now();
+        document.getElementById("data").innerText = "loading...";
+        setTimeout(() => {
+          let i = 0;
+          let a = () => {
+            if (i < 10000) {
+              for (let z = 0; z < 500000; ) z++;
+              i++;
+              a();
+            }
+          };
+          a();
+          document.getElementById("data").innerText = "42";
+          counter.send("expensive-computatiuon", Date.now() - timeStart);
+        }, 0);
+      };
+
+      window.addEventListener("beforeunload", (e) => {
+        counter.send("yellow", clickOnYellow);
+        counter.send("red", clickOnRed);
+      });
+
+      function getBrowserId() {
+        var aKeys = ["MSIE", "Firefox", "Safari", "Chrome", "Opera"],
+          sUsrAg = navigator.userAgent,
+          nIdx = aKeys.length - 1;
+
+        for (nIdx; nIdx > -1 && sUsrAg.indexOf(aKeys[nIdx]) === -1; nIdx--);
+
+        return aKeys[nIdx];
+      }
+      function onload() {
+        let performanceEntriesPaint = performance.getEntriesByType("paint");
+        console.log(performanceEntriesPaint);
+        performanceEntriesPaint.forEach((el) => {
+          counter.send(el.name, el.startTime);
+        });
+      }
+    </script>
+  </body>
+</html>
